@@ -1,10 +1,14 @@
 // SWE_project_website/server/index.ts
-import express, { Request, Response, NextFunction } from "express";
+// MUST BE THE FIRST LINES — BEFORE ANY OTHER IMPORT
 import dotenv from "dotenv";
 dotenv.config();
 
+import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import session from "express-session";
+
+// Now env is loaded — safe to import
+import { GITHUB_CLIENT_ID } from "./config/env.js";
 
 import authRouter from "./auth.js";
 import { registerRoutes } from "./routes.js";

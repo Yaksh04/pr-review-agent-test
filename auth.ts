@@ -77,6 +77,7 @@ import express, { Request, Response } from "express";
 import axios from "axios";
 import { Octokit } from "@octokit/rest";
 import session from "express-session";
+import { GITHUB_CLIENT_ID } from "./config/env.js";
 
 declare module "express-session" {
   interface SessionData {
