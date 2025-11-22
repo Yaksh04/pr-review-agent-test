@@ -1,26 +1,25 @@
 // SWE_project_website/server/index.ts
-console.log("RUNNING BUILD VERSION:", new Date().toISOString());
-console.log("HELLO_TEST:", process.env.HELLO_TEST);
-
-import dotenv from "dotenv";
-dotenv.config();
 
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import session from "express-session";
-
 import authRouter from "./auth.js";
 import { registerRoutes } from "./routes.js";
 
 const app = express();
 
-/* ---------------------- ENV ----------------------- */
-const FRONTEND_URL =
-  process.env.FRONTEND_URL || "https://pull-panda-a3s8.vercel.app";
+/* -----------------------
+   🔥 HARD-CODED CONSTANTS
+-------------------------- */
 
-console.log("ALLOWED ORIGIN:", FRONTEND_URL);
+const FRONTEND_URL = "https://pull-panda-a3s8.vercel.app";
 
-/* ---------------------- CORS ----------------------- */
+// Required for cookies
+const SESSION_SECRET = "supersecret-session-string";
+
+/* ----------------------
+   🔥 CORS
+------------------------- */
 app.use(
   cors({
     origin: FRONTEND_URL,
@@ -28,16 +27,18 @@ app.use(
   })
 );
 
-/* --------------------- SESSION ---------------------- */
+/* ----------------------
+   🔥 SESSION CONFIG
+------------------------- */
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || "supersecret",
+    secret: SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: true,         // 🔥 REQUIRED for HTTPS on Railway
-      sameSite: "none",     // 🔥 REQUIRED for cross-site cookies
+      secure: true,      // Railway is HTTPS → MUST be true
+      sameSite: "none",  // Cross-site cookies → MUST be none
       path: "/",
     },
   })
@@ -46,17 +47,20 @@ app.use(
 console.log("COOKIE SETTINGS:", {
   secure: true,
   sameSite: "none",
-  path: "/",
 });
 
-/* --------------------- BODY PARSING ---------------------- */
+/* ----------------------
+   BODY PARSING
+------------------------- */
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-/* ---------------------- AUTH ROUTES ---------------------- */
+/* ----------------------
+   ROUTES
+------------------------- */
 app.use("/api/auth", authRouter);
 
-/* ---------------------- OTHER API ROUTES ---------------------- */
+/* Additional API routes */
 (async () => {
   await registerRoutes(app);
 
@@ -65,7 +69,7 @@ app.use("/api/auth", authRouter);
   });
 
   app.get("/", (_req, res) => {
-    res.json({ status: "Backend running", env: "production" });
+    res.json({ status: "Backend running", env: "HARD-CODED" });
   });
 
   const port = parseInt(process.env.PORT || "8080", 10);

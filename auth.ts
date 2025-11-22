@@ -137,8 +137,10 @@
 import express, { Request, Response } from "express";
 import axios from "axios";
 import { Octokit } from "@octokit/rest";
-import session from "express-session";
 
+// ----------------------
+// Type extension for session
+// ----------------------
 declare module "express-session" {
   interface SessionData {
     accessToken?: string;
@@ -147,20 +149,30 @@ declare module "express-session" {
 
 const router = express.Router();
 
-const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID!;
-const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET!;
-const FRONTEND_URL = process.env.FRONTEND_URL!;
-const BACKEND_URL = process.env.BACKEND_URL!;
+/* ----------------------
+   🔥 HARD-CODED CONSTANTS
+------------------------- */
 
+// GitHub OAuth credentials
+const GITHUB_CLIENT_ID = "Ov23liYe2zHfm9WetpmF";
+const GITHUB_CLIENT_SECRET = "YOUR_GITHUB_SECRET_HERE";
+
+// Frontend (Vercel)
+const FRONTEND_URL = "https://pull-panda-a3s8.vercel.app";
+
+// Backend (Railway)
+const BACKEND_URL = "https://pr-review-agent-test-production-5d0a.up.railway.app";
+
+// OAuth callback URL
 const REDIRECT_URI = `${BACKEND_URL}/api/auth/github/callback`;
 
 console.log("AUTH CONFIG:");
 console.log("CLIENT ID:", GITHUB_CLIENT_ID);
 console.log("REDIRECT URI:", REDIRECT_URI);
 
-/* ------------------------------------------------------
-   STEP 1 — LOGIN ROUTE
--------------------------------------------------------- */
+/* ----------------------
+   LOGIN ROUTE
+------------------------- */
 router.get("/github", (_req: Request, res: Response) => {
   const authUrl =
     `https://github.com/login/oauth/authorize` +
@@ -171,9 +183,9 @@ router.get("/github", (_req: Request, res: Response) => {
   res.redirect(authUrl);
 });
 
-/* ------------------------------------------------------
-   STEP 2 — CALLBACK ROUTE
--------------------------------------------------------- */
+/* ----------------------
+   CALLBACK ROUTE
+------------------------- */
 router.get("/github/callback", async (req: Request, res: Response) => {
   const code = req.query.code as string;
 
@@ -200,7 +212,7 @@ router.get("/github/callback", async (req: Request, res: Response) => {
 
     req.session.accessToken = accessToken;
 
-    // 🔥 CRITICAL FIX — ensure session is saved BEFORE redirect
+    // Save session BEFORE redirect
     req.session.save((err) => {
       if (err) {
         console.error("SESSION SAVE FAILED:", err);
@@ -216,9 +228,9 @@ router.get("/github/callback", async (req: Request, res: Response) => {
   }
 });
 
-/* ------------------------------------------------------
-   STEP 3 — CHECK SESSION
--------------------------------------------------------- */
+/* ----------------------
+   CHECK LOGIN STATE
+------------------------- */
 router.get("/me", async (req: Request, res: Response) => {
   if (!req.session.accessToken) {
     return res.status(401).json({ error: "Not authenticated" });
