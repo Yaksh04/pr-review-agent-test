@@ -10,48 +10,43 @@ import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import session from "express-session";
 
-// Now env is loaded — safe to import
-import { GITHUB_CLIENT_ID } from "./config/env.js";
-
 import authRouter from "./auth.js";
 import { registerRoutes } from "./routes.js";
 
 const app = express();
 
-// ------------ ENV ------------
-const FRONTEND_URL = process.env.FRONTEND_URL || "*"; // Allow Vercel domain later
-
-// ------------ CORS ------------
+/* ---------------------- CORS ----------------------- */
 app.use(
   cors({
-    origin: FRONTEND_URL,
+    origin: "http://localhost:3000", // frontend
     credentials: true,
   })
 );
 
-// ------------ SESSION ------------
+/* --------------------- SESSION ---------------------- */
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || "supersecret",
+    secret: "supersecret",
     resave: false,
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: false, // Railway free tier = HTTP
+      secure: false, // Railway free tier = NOT HTTPS
       sameSite: "lax",
       path: "/",
     },
   })
 );
 
-// Body parser
+/* --------------------- BODY PARSING ---------------------- */
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Auth
+/* ---------------------- AUTH ROUTES ---------------------- */
+// 🔥 MUST match redirect URL inside auth.ts
 app.use("/api/auth", authRouter);
 
-// API Routes
+/* ---------------------- OTHER API ROUTES ---------------------- */
 (async () => {
   await registerRoutes(app);
 
@@ -60,16 +55,12 @@ app.use("/api/auth", authRouter);
     res.status(err.status || 500).json({ message: err.message });
   });
 
-  // ❗ REMOVE STATIC FRONTEND — FRONTEND IS ON VERCEL
-  // ❗ Do NOT serve frontend from backend
-  // ❗ This backend is API only
-
-  // Root check (important for Railway health-check)
-  app.get("/", (req, res) => {
+  // Root check for Railway
+  app.get("/", (_req, res) => {
     res.json({ status: "Backend running", env: "production" });
   });
 
-  // ---------- START SERVER ----------
+  // Start server
   const port = parseInt(process.env.PORT || "5000", 10);
   app.listen(port, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${port}`);
