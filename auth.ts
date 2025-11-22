@@ -155,7 +155,7 @@ const router = express.Router();
 
 // GitHub OAuth credentials
 const GITHUB_CLIENT_ID = "Ov23liYe2zHfm9WetpmF";
-const GITHUB_CLIENT_SECRET = "YOUR_GITHUB_SECRET_HERE";
+const GITHUB_CLIENT_SECRET = "a9fb42a08e454c363557fe09f84fc457aad344ab";
 
 // Frontend (Vercel)
 const FRONTEND_URL = "https://pull-panda-a3s8.vercel.app";
