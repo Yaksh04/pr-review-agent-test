@@ -25,8 +25,8 @@ const FRONTEND_URL = "https://pull-panda-a3s8.vercel.app";
 ------------------------------------------------------ */
 
 // TODO: replace with your actual MongoDB connection string
-const MONGO_URI = "mongodb+srv://princechovatiya01_db_user:12345@cluster0.k4iubg9.mongodb.net/sessionsDB";
-
+const MONGO_URI =
+  "mongodb+srv://princechovatiya01_db_user:Prince123%4045@cluster0.k4iubg9.mongodb.net/sessionsDB?retryWrites=true&w=majority&appName=Cluster0";
 /* ------------------------------------------------------
    CORS (allow cross-domain cookies)
 ------------------------------------------------------ */
