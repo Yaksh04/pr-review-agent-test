@@ -9,6 +9,9 @@ import { registerRoutes } from "./routes.js";
 
 const app = express();
 
+/* IMPORTANT: tell Express it's behind a proxy (Railway) so secure cookies work */
+app.set("trust proxy", 1);
+
 /* ------------------------------------------------------
    FRONTEND URL (hardcoded)
 ------------------------------------------------------ */

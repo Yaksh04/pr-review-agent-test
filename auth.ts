@@ -134,6 +134,7 @@
 
 
 // SWE_project_website/server/auth.ts
+
 import express from "express";
 import axios from "axios";
 import { Octokit } from "@octokit/rest";
@@ -141,23 +142,25 @@ import { Octokit } from "@octokit/rest";
 const router = express.Router();
 
 /* ------------------------------------------------------
-   HARDCODED CONSTANTS
+   HARD-CODED CONSTANTS
 ------------------------------------------------------ */
 const BACKEND_URL = "https://pr-review-agent-test-production-5d0a.up.railway.app";
 const FRONTEND_URL = "https://pull-panda-a3s8.vercel.app";
 
-// 🔥 USE YOUR REAL OAuth App values here:
+// IMPORTANT — MUST MATCH YOUR GITHUB OAUTH APP EXACTLY
 const GITHUB_CLIENT_ID = "Ov23liYe2zHfm9WetpmF";
 const GITHUB_CLIENT_SECRET = "34cabc07212ee78642c2671e0b7de06b01213136";
 
 /* ------------------------------------------------------
-   LOGIN → GITHUB
+   STEP 1 — LOGIN → REDIRECT TO GITHUB
 ------------------------------------------------------ */
 router.get("/github", (_req, res) => {
+  const redirectUri = `${BACKEND_URL}/api/auth/github/callback`;
+
   const url =
     `https://github.com/login/oauth/authorize` +
     `?client_id=${GITHUB_CLIENT_ID}` +
-    `&redirect_uri=${encodeURIComponent(`${BACKEND_URL}/api/auth/github/callback`)}` +
+    `&redirect_uri=${encodeURIComponent(redirectUri)}` +
     `&scope=repo,user` +
     `&prompt=consent&force_verify=true`;
 
@@ -165,21 +168,25 @@ router.get("/github", (_req, res) => {
 });
 
 /* ------------------------------------------------------
-   GITHUB CALLBACK
+   STEP 2 — GITHUB CALLBACK
 ------------------------------------------------------ */
 router.get("/github/callback", async (req, res) => {
   const code = req.query.code as string;
 
-  if (!code) return res.status(400).send("Missing code.");
+  if (!code) {
+    return res.status(400).send("Missing OAuth code.");
+  }
 
   try {
+    const redirectUri = `${BACKEND_URL}/api/auth/github/callback`;
+
     const tokenRes = await axios.post(
       "https://github.com/login/oauth/access_token",
       {
         client_id: GITHUB_CLIENT_ID,
         client_secret: GITHUB_CLIENT_SECRET,
         code,
-        redirect_uri: `${BACKEND_URL}/api/auth/github/callback`,
+        redirect_uri: redirectUri,
       },
       { headers: { Accept: "application/json" } }
     );
@@ -187,49 +194,56 @@ router.get("/github/callback", async (req, res) => {
     const accessToken = tokenRes.data.access_token;
 
     if (!accessToken) {
-      console.log("Token exchange failed:", tokenRes.data);
+      console.error("Token exchange failed:", tokenRes.data);
       return res.status(500).send("OAuth failed.");
     }
 
-    // Save token in session
+    // Save to session
     (req.session as any).accessToken = accessToken;
 
-    // 🔥 FIX: Redirect through backend to ensure cookie is saved
+    console.log("DEBUG CALLBACK: Session stored. Redirecting through backend bridge...");
+
+    // VERY IMPORTANT: Redirect through backend so cookie is saved before redirect to Vercel
     return res.redirect(`${BACKEND_URL}/api/auth/redirect`);
+
   } catch (err) {
-    console.error(err);
+    console.error("OAuth callback error:", err);
     return res.status(500).send("OAuth failed.");
   }
 });
 
 /* ------------------------------------------------------
-   BRIDGE REDIRECT — REQUIRED to persist cookie
+   STEP 3 — BACKEND BRIDGE REDIRECT
 ------------------------------------------------------ */
 router.get("/redirect", (req, res) => {
-  // Cookie is now stored, safe to redirect
+  // Cookie was set during callback, safe to redirect to frontend now
+  console.log("DEBUG REDIRECT: Cookie should now be stored.");
   res.redirect(FRONTEND_URL);
 });
 
 /* ------------------------------------------------------
-   GET USER
+   STEP 4 — CHECK AUTH STATE
 ------------------------------------------------------ */
 router.get("/me", async (req, res) => {
   const token = (req.session as any).accessToken;
 
-  if (!token) return res.status(401).json({ error: "Not authenticated" });
+  if (!token) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
 
   try {
     const octokit = new Octokit({ auth: token });
     const { data: user } = await octokit.rest.users.getAuthenticated();
-    return res.json(user);
+
+    res.json(user);
   } catch (err) {
-    console.log(err);
+    console.error("User fetch error:", err);
     return res.status(401).json({ error: "Invalid token" });
   }
 });
 
 /* ------------------------------------------------------
-   LOGOUT
+   STEP 5 — LOGOUT
 ------------------------------------------------------ */
 router.post("/logout", (req, res) => {
   req.session.destroy(() => {
@@ -238,6 +252,7 @@ router.post("/logout", (req, res) => {
       secure: true,
       sameSite: "none",
     });
+
     res.json({ message: "Logged out" });
   });
 });
