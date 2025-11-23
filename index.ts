@@ -18,7 +18,7 @@ app.set("trust proxy", 1);
 /* ------------------------------------------------------
    FRONTEND URL (hardcoded)
 ------------------------------------------------------ */
-const FRONTEND_URL = "https://pull-panda-a3s8.vercel.app";
+const FRONTEND_URL = "https://pull-panda-yaksh.vercel.app";
 
 /* ------------------------------------------------------
    MONGODB SESSION STORE
@@ -54,8 +54,8 @@ app.use(
 
     cookie: {
       httpOnly: true,
-      secure: true,       // REQUIRED for HTTPS (Railway)
-      sameSite: "none",   // REQUIRED for Vercel ↔ Railway cookies
+      secure: true, // REQUIRED for HTTPS (Railway)
+      sameSite: "none", // REQUIRED for Vercel ↔ Railway cookies
       path: "/",
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days login persistence
     },
