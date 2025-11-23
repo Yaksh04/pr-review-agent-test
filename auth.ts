@@ -149,7 +149,7 @@ const REDIRECT_URI = `${BACKEND_URL}/api/auth/github/callback`;
 const FRONTEND_URL = "https://pull-panda-a3s8.vercel.app";
 
 const GITHUB_CLIENT_ID = "Ov23liYe2zHfm9WetpmF";
-const GITHUB_CLIENT_SECRET = "1e8141bec9497d83b1f8e2de88712b9d9cd69177";
+const GITHUB_CLIENT_SECRET = "34cabc07212ee78642c2671e0b7de06b01213136";
 
 /* ------------------------------------------------------
    STEP 1 — LOGIN WITH GITHUB
