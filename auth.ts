@@ -145,7 +145,7 @@ const router = express.Router();
 ------------------------------------------------------ */
 const BACKEND_URL =
   "https://pr-review-agent-test-production-89fd.up.railway.app";
-const FRONTEND_URL = "https://pull-panda-yaksh.vercel.app/";
+const FRONTEND_URL = "https://pull-panda-yaksh.vercel.app";
 
 // IMPORTANT — MUST MATCH YOUR GITHUB OAUTH APP EXACTLY
 const GITHUB_CLIENT_ID = "Ov23licS5emlr88XvrDW";
