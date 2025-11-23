@@ -133,50 +133,42 @@
 // export default router;
 
 
-import express, { Request, Response } from "express";
+// SWE_project_website/server/auth.ts
+import express from "express";
 import axios from "axios";
 import { Octokit } from "@octokit/rest";
 
 const router = express.Router();
 
-/* -----------------------------------------------------
-   🔥 HARDCODED CONSTANTS — MATCH YOUR SERVER ROUTES
+/* ------------------------------------------------------
+   HARDCODED CONSTANTS (no .env)
 ------------------------------------------------------ */
+const BACKEND_URL = "https://pr-review-agent-test-production-5d0a.up.railway.app";
+const REDIRECT_URI = `${BACKEND_URL}/api/auth/github/callback`;
+
+const FRONTEND_URL = "https://pull-panda-a3s8.vercel.app";
+
 const GITHUB_CLIENT_ID = "Ov23liVEZWJtiA8Tsd7Z";
 const GITHUB_CLIENT_SECRET = "1e8141bec9497d83b1f8e2de88712b9d9cd69177";
 
-const RAILWAY_URL = "https://pr-review-agent-test-production-5d0a.up.railway.app";
-
-// MUST MATCH the route prefix in index.ts → app.use("/api/auth", authRouter)
-const REDIRECT_URI = `${RAILWAY_URL}/api/auth/github/callback`;
-
-// FRONTEND deployed on Vercel
-const FRONTEND_URL = "https://pull-panda-a3s8.vercel.app";
-
-console.log("AUTH CONFIG:");
-console.log("CLIENT ID:", GITHUB_CLIENT_ID);
-console.log("REDIRECT URI:", REDIRECT_URI);
-
-
 /* ------------------------------------------------------
-   STEP 1 — LOGIN ROUTE (redirect to GitHub)
--------------------------------------------------------- */
-router.get("/github", (_req: Request, res: Response) => {
+   STEP 1 — LOGIN WITH GITHUB
+------------------------------------------------------ */
+router.get("/github", (_req, res) => {
   const authUrl =
     `https://github.com/login/oauth/authorize` +
     `?client_id=${GITHUB_CLIENT_ID}` +
     `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
     `&scope=repo,user` +
-    `&prompt=consent` +
-    `&force_verify=true`;
+    `&prompt=consent&force_verify=true`;
 
   res.redirect(authUrl);
 });
 
 /* ------------------------------------------------------
-   STEP 2 — CALLBACK ROUTE (GitHub → Backend)
--------------------------------------------------------- */
-router.get("/github/callback", async (req: Request, res: Response) => {
+   STEP 2 — GITHUB CALLBACK
+------------------------------------------------------ */
+router.get("/github/callback", async (req, res) => {
   const code = req.query.code as string;
 
   if (!code) return res.status(400).send("Missing OAuth code.");
@@ -197,52 +189,47 @@ router.get("/github/callback", async (req: Request, res: Response) => {
 
     if (!accessToken) {
       console.error("Token exchange failed:", tokenRes.data);
-      return res.status(401).send("Token exchange failed.");
+      return res.status(401).send("OAuth failed.");
     }
 
-    // FIXED: no TS error (session typing)
+    // Store token in session
     (req.session as any).accessToken = accessToken;
 
-    console.log("✔ OAuth SUCCESS — redirecting to frontend:", FRONTEND_URL);
-
     return res.redirect(FRONTEND_URL);
-
   } catch (err) {
-    console.error("❌ OAuth callback failed:", err);
-    return res.status(500).send("GitHub OAuth failed.");
+    console.error(err);
+    return res.status(500).send("OAuth error.");
   }
 });
 
 /* ------------------------------------------------------
-   STEP 3 — PROTECTED ROUTE (frontend → backend)
--------------------------------------------------------- */
-router.get("/me", async (req: Request, res: Response) => {
+   STEP 3 — CHECK LOGIN STATUS
+------------------------------------------------------ */
+router.get("/me", async (req, res) => {
   const token = (req.session as any).accessToken;
 
-  if (!token) {
-    return res.status(401).json({ error: "Not authenticated" });
-  }
+  if (!token) return res.status(401).json({ error: "Not authenticated" });
 
   try {
     const octokit = new Octokit({ auth: token });
     const { data: user } = await octokit.rest.users.getAuthenticated();
-    return res.json(user);
+
+    res.json(user);
   } catch (err) {
-    console.error("Session token invalid:", err);
-    (req.session as any).accessToken = null;
-    return res.status(401).json({ error: "Token invalid, please log in again." });
+    console.error(err);
+    return res.status(401).json({ error: "Token invalid" });
   }
 });
 
 /* ------------------------------------------------------
    STEP 4 — LOGOUT
--------------------------------------------------------- */
-router.post("/logout", (req: Request, res: Response) => {
+------------------------------------------------------ */
+router.post("/logout", (req, res) => {
   req.session.destroy(() => {
     res.clearCookie("connect.sid", {
       path: "/",
-      sameSite: "lax",
-      secure: false,
+      sameSite: "none",
+      secure: true,
     });
     return res.json({ message: "Logged out" });
   });

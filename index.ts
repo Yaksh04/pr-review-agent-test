@@ -1,6 +1,6 @@
 // SWE_project_website/server/index.ts
 
-import express, { Request, Response, NextFunction } from "express";
+import express from "express";
 import cors from "cors";
 import session from "express-session";
 
@@ -10,75 +10,57 @@ import { registerRoutes } from "./routes.js";
 const app = express();
 
 /* ------------------------------------------------------
-   FRONTEND URL — Update if needed
---------------------------------------------------------- */
-const FRONTEND_URL = "https://pull-panda-a3s8.vercel.app"; // Vercel frontend
+   FRONTEND URL (hardcoded)
+------------------------------------------------------ */
+const FRONTEND_URL = "https://pull-panda-a3s8.vercel.app";
 
 /* ------------------------------------------------------
-   CORS CONFIG (VERY IMPORTANT)
---------------------------------------------------------- */
+   CORS — allow cookies from Vercel
+------------------------------------------------------ */
 app.use(
   cors({
     origin: FRONTEND_URL,
-    credentials: true, // allow cookies
+    credentials: true,
   })
 );
 
 /* ------------------------------------------------------
-   SESSION CONFIG — ONLY HERE (not inside auth.ts)
---------------------------------------------------------- */
+   SESSION — NO ENV — WORKS ON RAILWAY + VERCEL
+------------------------------------------------------ */
 app.use(
   session({
-    secret: "supersecret", // your hardcoded session secret
+    secret: "supersecret",      // hardcoded, as you want
     resave: false,
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: true,              // because Railway uses HTTPS
-      sameSite: "none",          // required for cross-site cookies
-      path: "/",                 // allow all routes to access cookie
+      secure: true,             // Railway is HTTPS → MUST be true
+      sameSite: "none",         // Vercel ↔ Railway cross-site cookie
+      path: "/",
     },
   })
 );
 
 /* ------------------------------------------------------
    BODY PARSERS
---------------------------------------------------------- */
+------------------------------------------------------ */
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 /* ------------------------------------------------------
-   AUTH ROUTES (MUST MATCH THE REDIRECT)
-   auth.ts expects: /api/auth/*
---------------------------------------------------------- */
+   ROUTES
+------------------------------------------------------ */
 app.use("/api/auth", authRouter);
 
-/* ------------------------------------------------------
-   API ROUTES (your project routes)
---------------------------------------------------------- */
 (async () => {
   await registerRoutes(app);
 
-  /* ------------------------------------------------------
-     ERROR HANDLER
-  --------------------------------------------------------- */
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    console.error(err);
-    res.status(err.status || 500).json({ message: err.message });
-  });
-
-  /* ------------------------------------------------------
-     HEALTH CHECK (for Railway)
-  --------------------------------------------------------- */
   app.get("/", (_req, res) => {
-    res.json({ status: "Backend running on Railway", env: "production" });
+    res.json({ status: "Backend running on Railway" });
   });
 
-  /* ------------------------------------------------------
-     START SERVER
-  --------------------------------------------------------- */
   const port = parseInt(process.env.PORT || "5000", 10);
   app.listen(port, "0.0.0.0", () => {
-    console.log(`🚀 Server running on port ${port}`);
+    console.log(`🚀 Backend running on port ${port}`);
   });
 })();
