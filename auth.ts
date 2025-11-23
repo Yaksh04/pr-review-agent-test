@@ -132,7 +132,6 @@
 
 // export default router;
 
-
 // SWE_project_website/server/auth.ts
 
 import express from "express";
@@ -144,7 +143,8 @@ const router = express.Router();
 /* ------------------------------------------------------
    HARD-CODED CONSTANTS
 ------------------------------------------------------ */
-const BACKEND_URL = "https://pr-review-agent-test-production-5d0a.up.railway.app";
+const BACKEND_URL =
+  "https://pr-review-agent-test-production-5d0a.up.railway.app";
 const FRONTEND_URL = "https://pull-panda-a3s8.vercel.app";
 
 // IMPORTANT — MUST MATCH YOUR GITHUB OAUTH APP EXACTLY
@@ -199,13 +199,10 @@ router.get("/github/callback", async (req, res) => {
     }
 
     // Save to session
-    (req.session as any).accessToken = accessToken;
+    console.log("✔ Token acquired. Handing off to frontend...");
 
-    console.log("DEBUG CALLBACK: Session stored. Redirecting through backend bridge...");
-
-    // VERY IMPORTANT: Redirect through backend so cookie is saved before redirect to Vercel
-    return res.redirect(`${BACKEND_URL}/api/auth/redirect`);
-
+    // Redirects to: https://pull-panda-a3s8.vercel.app?token=gho_12345abc...
+    return res.redirect(`${FRONTEND_URL}?token=${accessToken}`);
   } catch (err) {
     console.error("OAuth callback error:", err);
     return res.status(500).send("OAuth failed.");

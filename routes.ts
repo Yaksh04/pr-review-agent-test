@@ -4,7 +4,8 @@ import { Octokit } from "@octokit/rest";
 
 // Typed helper to get authenticated GitHub client
 function getClient(req: Request): Octokit {
-  const token = (req.session as any)?.accessToken;
+  const authHeader = req.headers.authorization;
+  const token = authHeader ? authHeader.split(" ")[1] : null;
 
   if (!token) {
     const error: any = new Error("Not authenticated");
@@ -37,10 +38,12 @@ export async function registerRoutes(app: Express): Promise<void> {
     try {
       const octokit = getClient(req);
 
-      const { data: repos } = await octokit.rest.repos.listForAuthenticatedUser({
-        sort: "updated",
-        per_page: 30,
-      });
+      const { data: repos } = await octokit.rest.repos.listForAuthenticatedUser(
+        {
+          sort: "updated",
+          per_page: 30,
+        }
+      );
 
       // To compute open PR count per repo:
       const repositoriesWithPRCounts = await Promise.all(
@@ -96,7 +99,6 @@ export async function registerRoutes(app: Express): Promise<void> {
       );
 
       res.json(repositoriesWithPRCounts);
-
     } catch (error: any) {
       console.error("Error fetching repositories:", error);
       res.status(error.status || 500).json({ error: error.message });
@@ -113,14 +115,15 @@ export async function registerRoutes(app: Express): Promise<void> {
       const repoFilter = req.query.repo as string | undefined;
       const ownerFilter = req.query.owner as string | undefined;
 
-      const { data: repos } = await octokit.rest.repos.listForAuthenticatedUser({
-        per_page: 100
-      });
+      const { data: repos } = await octokit.rest.repos.listForAuthenticatedUser(
+        {
+          per_page: 100,
+        }
+      );
 
       const allPRs: any[] = [];
 
       for (const repo of repos.slice(0, 20)) {
-
         // Repo filter — only fetch PRs of selected repo
         if (repoFilter && repo.name !== repoFilter) continue;
         if (ownerFilter && repo.owner?.login !== ownerFilter) continue;
@@ -132,7 +135,7 @@ export async function registerRoutes(app: Express): Promise<void> {
             state: "all",
             per_page: 50,
             sort: "updated",
-            direction: "desc"
+            direction: "desc",
           });
 
           // ⭐ Check AI-reviewed status for each PR
@@ -140,10 +143,10 @@ export async function registerRoutes(app: Express): Promise<void> {
             const { data: comments } = await octokit.rest.issues.listComments({
               owner: repo.owner!.login,
               repo: repo.name,
-              issue_number: pr.number
+              issue_number: pr.number,
             });
 
-            const aiReviewed = comments.some(c =>
+            const aiReviewed = comments.some((c) =>
               c.body?.toLowerCase().includes("ai-powered review")
             );
 
@@ -161,14 +164,13 @@ export async function registerRoutes(app: Express): Promise<void> {
 
               user: {
                 login: pr.user?.login || "unknown",
-                avatar_url: pr.user?.avatar_url || ""
+                avatar_url: pr.user?.avatar_url || "",
               },
 
               // ⭐ NEW FIELD ADDED
-              aiReviewed
+              aiReviewed,
             });
           }
-
         } catch (innerErr) {
           console.error(`PR fetch error for repo ${repo.name}:`, innerErr);
         }
@@ -177,12 +179,10 @@ export async function registerRoutes(app: Express): Promise<void> {
       // Sort by latest
       allPRs.sort(
         (a, b) =>
-          new Date(b.updated_at).getTime() -
-          new Date(a.updated_at).getTime()
+          new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
       );
 
       res.json(allPRs);
-
     } catch (error: any) {
       res.status(error.status || 500).json({ error: error.message });
     }
@@ -202,13 +202,13 @@ export async function registerRoutes(app: Express): Promise<void> {
         const { data: reviews } = await octokit.rest.pulls.listReviews({
           owner,
           repo,
-          pull_number: PR_NUMBER
+          pull_number: PR_NUMBER,
         });
 
         const { data: comments } = await octokit.rest.issues.listComments({
           owner,
           repo,
-          issue_number: PR_NUMBER
+          issue_number: PR_NUMBER,
         });
 
         const aiReviews = comments.filter(
@@ -221,7 +221,7 @@ export async function registerRoutes(app: Express): Promise<void> {
         res.json({
           reviews,
           aiReviews,
-          allComments: comments
+          allComments: comments,
         });
       } catch (error: any) {
         res.status(error.status || 500).json({ error: error.message });
@@ -236,9 +236,11 @@ export async function registerRoutes(app: Express): Promise<void> {
     try {
       const octokit = getClient(req);
 
-      const { data: repos } = await octokit.rest.repos.listForAuthenticatedUser({
-        per_page: 100
-      });
+      const { data: repos } = await octokit.rest.repos.listForAuthenticatedUser(
+        {
+          per_page: 100,
+        }
+      );
 
       let totalPRs = 0;
       let openPRs = 0;
@@ -251,13 +253,15 @@ export async function registerRoutes(app: Express): Promise<void> {
             owner: repo.owner!.login,
             repo: repo.name,
             state: "all",
-            per_page: 100
+            per_page: 100,
           });
 
           totalPRs += prs.length;
           openPRs += prs.filter((pr) => pr.state === "open").length;
           mergedPRs += prs.filter((pr) => pr.merged_at).length;
-          closedPRs += prs.filter((pr) => pr.state === "closed" && !pr.merged_at).length;
+          closedPRs += prs.filter(
+            (pr) => pr.state === "closed" && !pr.merged_at
+          ).length;
         } catch (statsErr) {
           console.error(`Stats error for ${repo.name}:`, statsErr);
         }
@@ -268,10 +272,8 @@ export async function registerRoutes(app: Express): Promise<void> {
         openPRs,
         mergedPRs,
         closedPRs,
-        acceptanceRate: totalPRs
-          ? Math.round((mergedPRs / totalPRs) * 100)
-          : 0,
-        activeRepos: repos.length
+        acceptanceRate: totalPRs ? Math.round((mergedPRs / totalPRs) * 100) : 0,
+        activeRepos: repos.length,
       });
     } catch (error: any) {
       res.status(error.status || 500).json({ error: error.message });
