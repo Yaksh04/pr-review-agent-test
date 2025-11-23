@@ -148,7 +148,7 @@ const FRONTEND_URL = "https://pull-panda-a3s8.vercel.app";
 
 // 🔥 USE YOUR REAL OAuth App values here:
 const GITHUB_CLIENT_ID = "Ov23liYe2zHfm9WetpmF";
-const GITHUB_CLIENT_SECRET = "PUT_YOUR_NEW_SECRET_HERE";
+const GITHUB_CLIENT_SECRET = "34cabc07212ee78642c2671e0b7de06b01213136";
 
 /* ------------------------------------------------------
    LOGIN → GITHUB
