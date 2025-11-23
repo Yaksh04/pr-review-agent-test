@@ -3,76 +3,81 @@
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import session from "express-session";
+
 import authRouter from "./auth.js";
 import { registerRoutes } from "./routes.js";
 
 const app = express();
 
-/* -----------------------
-   🔥 HARD-CODED CONSTANTS
--------------------------- */
+/* ------------------------------------------------------
+   FRONTEND URL — Update if needed
+--------------------------------------------------------- */
+const FRONTEND_URL = "https://pull-panda-a3s8.vercel.app"; // Vercel frontend
 
-const FRONTEND_URL = "https://pull-panda-a3s8.vercel.app";
-
-// Required for cookies
-const SESSION_SECRET = "supersecret-session-string";
-
-/* ----------------------
-   🔥 CORS
-------------------------- */
+/* ------------------------------------------------------
+   CORS CONFIG (VERY IMPORTANT)
+--------------------------------------------------------- */
 app.use(
   cors({
     origin: FRONTEND_URL,
-    credentials: true,
+    credentials: true, // allow cookies
   })
 );
 
-/* ----------------------
-   🔥 SESSION CONFIG
-------------------------- */
+/* ------------------------------------------------------
+   SESSION CONFIG — ONLY HERE (not inside auth.ts)
+--------------------------------------------------------- */
 app.use(
   session({
-    secret: SESSION_SECRET,
+    secret: "supersecret", // your hardcoded session secret
     resave: false,
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: true,      // Railway is HTTPS → MUST be true
-      sameSite: "none",  // Cross-site cookies → MUST be none
-      path: "/",
+      secure: true,              // because Railway uses HTTPS
+      sameSite: "none",          // required for cross-site cookies
+      path: "/",                 // allow all routes to access cookie
     },
   })
 );
 
-console.log("COOKIE SETTINGS:", {
-  secure: true,
-  sameSite: "none",
-});
-
-/* ----------------------
-   BODY PARSING
-------------------------- */
+/* ------------------------------------------------------
+   BODY PARSERS
+--------------------------------------------------------- */
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-/* ----------------------
-   ROUTES
-------------------------- */
+/* ------------------------------------------------------
+   AUTH ROUTES (MUST MATCH THE REDIRECT)
+   auth.ts expects: /api/auth/*
+--------------------------------------------------------- */
 app.use("/api/auth", authRouter);
 
-/* Additional API routes */
+/* ------------------------------------------------------
+   API ROUTES (your project routes)
+--------------------------------------------------------- */
 (async () => {
   await registerRoutes(app);
 
+  /* ------------------------------------------------------
+     ERROR HANDLER
+  --------------------------------------------------------- */
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    console.error(err);
     res.status(err.status || 500).json({ message: err.message });
   });
 
+  /* ------------------------------------------------------
+     HEALTH CHECK (for Railway)
+  --------------------------------------------------------- */
   app.get("/", (_req, res) => {
-    res.json({ status: "Backend running", env: "HARD-CODED" });
+    res.json({ status: "Backend running on Railway", env: "production" });
   });
 
-  const port = parseInt(process.env.PORT || "8080", 10);
+  /* ------------------------------------------------------
+     START SERVER
+  --------------------------------------------------------- */
+  const port = parseInt(process.env.PORT || "5000", 10);
   app.listen(port, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${port}`);
   });
