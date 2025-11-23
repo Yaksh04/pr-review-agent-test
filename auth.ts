@@ -141,37 +141,36 @@ import { Octokit } from "@octokit/rest";
 const router = express.Router();
 
 /* ------------------------------------------------------
-   HARDCODED CONSTANTS (no .env)
+   HARDCODED CONSTANTS
 ------------------------------------------------------ */
 const BACKEND_URL = "https://pr-review-agent-test-production-5d0a.up.railway.app";
-const REDIRECT_URI = `${BACKEND_URL}/api/auth/github/callback`;
-
 const FRONTEND_URL = "https://pull-panda-a3s8.vercel.app";
 
+// 🔥 USE YOUR REAL OAuth App values here:
 const GITHUB_CLIENT_ID = "Ov23liYe2zHfm9WetpmF";
-const GITHUB_CLIENT_SECRET = "34cabc07212ee78642c2671e0b7de06b01213136";
+const GITHUB_CLIENT_SECRET = "PUT_YOUR_NEW_SECRET_HERE";
 
 /* ------------------------------------------------------
-   STEP 1 — LOGIN WITH GITHUB
+   LOGIN → GITHUB
 ------------------------------------------------------ */
 router.get("/github", (_req, res) => {
-  const authUrl =
+  const url =
     `https://github.com/login/oauth/authorize` +
     `?client_id=${GITHUB_CLIENT_ID}` +
-    `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
+    `&redirect_uri=${encodeURIComponent(`${BACKEND_URL}/api/auth/github/callback`)}` +
     `&scope=repo,user` +
     `&prompt=consent&force_verify=true`;
 
-  res.redirect(authUrl);
+  res.redirect(url);
 });
 
 /* ------------------------------------------------------
-   STEP 2 — GITHUB CALLBACK
+   GITHUB CALLBACK
 ------------------------------------------------------ */
 router.get("/github/callback", async (req, res) => {
   const code = req.query.code as string;
 
-  if (!code) return res.status(400).send("Missing OAuth code.");
+  if (!code) return res.status(400).send("Missing code.");
 
   try {
     const tokenRes = await axios.post(
@@ -180,7 +179,7 @@ router.get("/github/callback", async (req, res) => {
         client_id: GITHUB_CLIENT_ID,
         client_secret: GITHUB_CLIENT_SECRET,
         code,
-        redirect_uri: REDIRECT_URI,
+        redirect_uri: `${BACKEND_URL}/api/auth/github/callback`,
       },
       { headers: { Accept: "application/json" } }
     );
@@ -188,22 +187,31 @@ router.get("/github/callback", async (req, res) => {
     const accessToken = tokenRes.data.access_token;
 
     if (!accessToken) {
-      console.error("Token exchange failed:", tokenRes.data);
-      return res.status(401).send("OAuth failed.");
+      console.log("Token exchange failed:", tokenRes.data);
+      return res.status(500).send("OAuth failed.");
     }
 
-    // Store token in session
+    // Save token in session
     (req.session as any).accessToken = accessToken;
 
-    return res.redirect(FRONTEND_URL);
+    // 🔥 FIX: Redirect through backend to ensure cookie is saved
+    return res.redirect(`${BACKEND_URL}/api/auth/redirect`);
   } catch (err) {
     console.error(err);
-    return res.status(500).send("OAuth error.");
+    return res.status(500).send("OAuth failed.");
   }
 });
 
 /* ------------------------------------------------------
-   STEP 3 — CHECK LOGIN STATUS
+   BRIDGE REDIRECT — REQUIRED to persist cookie
+------------------------------------------------------ */
+router.get("/redirect", (req, res) => {
+  // Cookie is now stored, safe to redirect
+  res.redirect(FRONTEND_URL);
+});
+
+/* ------------------------------------------------------
+   GET USER
 ------------------------------------------------------ */
 router.get("/me", async (req, res) => {
   const token = (req.session as any).accessToken;
@@ -213,25 +221,24 @@ router.get("/me", async (req, res) => {
   try {
     const octokit = new Octokit({ auth: token });
     const { data: user } = await octokit.rest.users.getAuthenticated();
-
-    res.json(user);
+    return res.json(user);
   } catch (err) {
-    console.error(err);
-    return res.status(401).json({ error: "Token invalid" });
+    console.log(err);
+    return res.status(401).json({ error: "Invalid token" });
   }
 });
 
 /* ------------------------------------------------------
-   STEP 4 — LOGOUT
+   LOGOUT
 ------------------------------------------------------ */
 router.post("/logout", (req, res) => {
   req.session.destroy(() => {
     res.clearCookie("connect.sid", {
       path: "/",
-      sameSite: "none",
       secure: true,
+      sameSite: "none",
     });
-    return res.json({ message: "Logged out" });
+    res.json({ message: "Logged out" });
   });
 });
 

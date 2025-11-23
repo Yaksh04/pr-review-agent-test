@@ -34,8 +34,8 @@ app.use(
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: true,             // Railway is HTTPS → MUST be true
-      sameSite: "none",         // Vercel ↔ Railway cross-site cookie
+      secure: true,       // MUST be true for Railway HTTPS
+      sameSite: "none",   // Required for cross-domain cookies
       path: "/",
     },
   })
