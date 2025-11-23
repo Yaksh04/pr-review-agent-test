@@ -144,12 +144,12 @@ const router = express.Router();
    HARD-CODED CONSTANTS
 ------------------------------------------------------ */
 const BACKEND_URL =
-  "https://pr-review-agent-test-production-5d0a.up.railway.app";
-const FRONTEND_URL = "https://pull-panda-a3s8.vercel.app";
+  "https://pr-review-agent-test-production-89fd.up.railway.app";
+const FRONTEND_URL = "https://pull-panda-yaksh.vercel.app/";
 
 // IMPORTANT — MUST MATCH YOUR GITHUB OAUTH APP EXACTLY
-const GITHUB_CLIENT_ID = "Ov23liYe2zHfm9WetpmF";
-const GITHUB_CLIENT_SECRET = "34cabc07212ee78642c2671e0b7de06b01213136";
+const GITHUB_CLIENT_ID = "Ov23licS5emlr88XvrDW";
+const GITHUB_CLIENT_SECRET = "355d52a6e737dbf4354f63354b7deb0bab35cdb4";
 
 /* ------------------------------------------------------
    STEP 1 — LOGIN → REDIRECT TO GITHUB
@@ -222,7 +222,8 @@ router.get("/redirect", (req, res) => {
    STEP 4 — CHECK AUTH STATE
 ------------------------------------------------------ */
 router.get("/me", async (req, res) => {
-  const token = (req.session as any).accessToken;
+  const authHeader = req.headers.authorization;
+  const token = authHeader ? authHeader.split(" ")[1] : null;
 
   if (!token) {
     return res.status(401).json({ error: "Not authenticated" });
