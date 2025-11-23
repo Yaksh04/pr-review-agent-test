@@ -3,13 +3,16 @@
 import express from "express";
 import cors from "cors";
 import session from "express-session";
+import MongoStore from "connect-mongo";
 
 import authRouter from "./auth.js";
 import { registerRoutes } from "./routes.js";
 
 const app = express();
 
-/* IMPORTANT: tell Express it's behind a proxy (Railway) so secure cookies work */
+/* ------------------------------------------------------
+   IMPORTANT: TRUST PROXY (required for Railway HTTPS)
+------------------------------------------------------ */
 app.set("trust proxy", 1);
 
 /* ------------------------------------------------------
@@ -18,7 +21,14 @@ app.set("trust proxy", 1);
 const FRONTEND_URL = "https://pull-panda-a3s8.vercel.app";
 
 /* ------------------------------------------------------
-   CORS — allow cookies from Vercel
+   MONGODB SESSION STORE
+------------------------------------------------------ */
+
+// TODO: replace with your actual MongoDB connection string
+const MONGO_URI = "mongodb+srv://princechovatiya01_db_user:12345@cluster0.k4iubg9.mongodb.net/sessionsDB";
+
+/* ------------------------------------------------------
+   CORS (allow cross-domain cookies)
 ------------------------------------------------------ */
 app.use(
   cors({
@@ -28,18 +38,26 @@ app.use(
 );
 
 /* ------------------------------------------------------
-   SESSION — NO ENV — WORKS ON RAILWAY + VERCEL
+   SESSION (persistent using MongoDB)
 ------------------------------------------------------ */
 app.use(
   session({
-    secret: "supersecret",      // hardcoded, as you want
+    secret: "supersecret", // your hard-coded secret
     resave: false,
     saveUninitialized: false,
+
+    store: MongoStore.create({
+      mongoUrl: MONGO_URI,
+      collectionName: "sessions",
+      ttl: 14 * 24 * 60 * 60, // 14 days
+    }),
+
     cookie: {
       httpOnly: true,
-      secure: true,       // MUST be true for Railway HTTPS
-      sameSite: "none",   // Required for cross-domain cookies
+      secure: true,       // REQUIRED for HTTPS (Railway)
+      sameSite: "none",   // REQUIRED for Vercel ↔ Railway cookies
       path: "/",
+      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days login persistence
     },
   })
 );
