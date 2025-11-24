@@ -210,19 +210,19 @@ export async function registerRoutes(app: Express): Promise<void> {
       try {
         const octokit = getClient(req);
         const { owner, repo, number } = req.params;
-        constPR_NUMBER = parseInt(number);
+        const PR_NUMBER = parseInt(number);
 
         // Parallelize Reviews + Comments fetch
         const [reviewsRes, commentsRes] = await Promise.all([
           octokit.rest.pulls.listReviews({
             owner,
             repo,
-            pull_number: constPR_NUMBER,
+            pull_number: PR_NUMBER,
           }),
           octokit.rest.issues.listComments({
             owner,
             repo,
-            issue_number: constPR_NUMBER,
+            issue_number: PR_NUMBER,
           }),
         ]);
 
