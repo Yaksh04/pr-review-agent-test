@@ -249,16 +249,11 @@ router.get("/me", async (req, res) => {
 /* 
    STEP 5 — LOGOUT
  */
-router.post("/logout", (req, res) => {
-  req.session.destroy(() => {
-    res.clearCookie("connect.sid", {
-      path: "/",
-      secure: true,
-      sameSite: "none",
-    });
+router.post("/logout", (_req, res) => {
+  // Since we use Stateless Auth (Tokens), there is no server session to destroy.
+  // The frontend handles logout by removing the token from LocalStorage.
 
-    res.json({ message: "Logged out" });
-  });
+  res.json({ message: "Logged out successfully" });
 });
 
 export default router;
