@@ -140,20 +140,29 @@ import { Octokit } from "@octokit/rest";
 
 const router = express.Router();
 
-/* ------------------------------------------------------
-   HARD-CODED CONSTANTS
------------------------------------------------------- */
-const BACKEND_URL =
-  "https://pr-review-agent-test-production-89fd.up.railway.app";
-const FRONTEND_URL = "https://pull-panda-yaksh.vercel.app";
+/* ENVIRONMENT VARIABLES*/
 
-// IMPORTANT — MUST MATCH YOUR GITHUB OAUTH APP EXACTLY
-const GITHUB_CLIENT_ID = "Ov23licS5emlr88XvrDW";
-const GITHUB_CLIENT_SECRET = "355d52a6e737dbf4354f63354b7deb0bab35cdb4";
+// 1. Backend URL: Railway provides this automatically as RAILWAY_PUBLIC_DOMAIN
+const BACKEND_URL = process.env.RAILWAY_PUBLIC_DOMAIN
+  ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+  : process.env.BACKEND_URL || "http://localhost:5000";
 
-/* ------------------------------------------------------
+// 2. Frontend URL: You set this manually in Railway variables
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
+
+// 3. GitHub Keys: You set these manually in Railway variables
+const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID;
+const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
+
+// Safety Check: Crash if keys are missing (helps debugging)
+if (!GITHUB_CLIENT_ID || !GITHUB_CLIENT_SECRET) {
+  console.error("CRITICAL ERROR: Missing GitHub OAuth Credentials in .env");
+  throw new Error("Missing GitHub OAuth Credentials");
+}
+
+/* 
    STEP 1 — LOGIN → REDIRECT TO GITHUB
------------------------------------------------------- */
+ */
 router.get("/github", (_req, res) => {
   const redirectUri = `${BACKEND_URL}/api/auth/github/callback`;
 
@@ -167,9 +176,9 @@ router.get("/github", (_req, res) => {
   res.redirect(url);
 });
 
-/* ------------------------------------------------------
+/* 
    STEP 2 — GITHUB CALLBACK
------------------------------------------------------- */
+ */
 router.get("/github/callback", async (req, res) => {
   const code = req.query.code as string;
 
@@ -199,9 +208,8 @@ router.get("/github/callback", async (req, res) => {
     }
 
     // Save to session
-    console.log("✔ Token acquired. Handing off to frontend...");
+    console.log("Token acquired. Handing off to frontend...");
 
-    // Redirects to: https://pull-panda-a3s8.vercel.app?token=gho_12345abc...
     return res.redirect(`${FRONTEND_URL}?token=${accessToken}`);
   } catch (err) {
     console.error("OAuth callback error:", err);
@@ -209,18 +217,16 @@ router.get("/github/callback", async (req, res) => {
   }
 });
 
-/* ------------------------------------------------------
+/* 
    STEP 3 — BACKEND BRIDGE REDIRECT
------------------------------------------------------- */
+ */
 router.get("/redirect", (req, res) => {
   // Cookie was set during callback, safe to redirect to frontend now
   console.log("DEBUG REDIRECT: Cookie should now be stored.");
   res.redirect(FRONTEND_URL);
 });
 
-/* ------------------------------------------------------
-   STEP 4 — CHECK AUTH STATE
------------------------------------------------------- */
+/* STEP 4 — CHECK AUTH STATE */
 router.get("/me", async (req, res) => {
   const authHeader = req.headers.authorization;
   const token = authHeader ? authHeader.split(" ")[1] : null;
@@ -240,9 +246,9 @@ router.get("/me", async (req, res) => {
   }
 });
 
-/* ------------------------------------------------------
+/* 
    STEP 5 — LOGOUT
------------------------------------------------------- */
+ */
 router.post("/logout", (req, res) => {
   req.session.destroy(() => {
     res.clearCookie("connect.sid", {
